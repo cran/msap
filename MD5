@@ -1,12 +1,13 @@
-39f7ca753249e6c1431812950fb14935 *DESCRIPTION
+3ebf237e94ec1a9322f205af1595c93a *DESCRIPTION
 3761da6f38eacb2098249ed9cb4547cb *NAMESPACE
 e4df16cc693d3abbdbbe4648e5eab263 *R/diffAmova.R
 298bf7ac9976a8d0295c9d0eacf2d1b3 *R/methStatusEval.R
-76e1c2e1bbee238c988ee494daf04333 *R/msap.R
+bbf112816676727685661555c2e1c8f4 *R/msap.R
 bbe87541394826a8825cc9bf374474ad *R/pcoa.R
 61da8cc2a42e0648842808d7a9324205 *R/polymorphic.R
 31dafd8e1e778d5235e17a3000045b4e *R/redundant.R
 9d8e8ba578098faec1f5e4ce11d11ca8 *R/repMet.R
+15bf9c53014e8ba7e151da68f28b6465 *R/segShannon.R
 60d854463e76632585d8e4c169405012 *R/shannon.R
 1d883b68b44c6f80a0d8f7544c8337bb *inst/CITATION
 1b0beb1689397d31e315ac23eaaea199 *inst/doc/msap.Rnw
@@ -22,3 +23,5 @@ f9c7353e739c7e66f99e67ecb047f416 *vignettes/csvfile.png
 b6906f1843791ee3d3d993e46f10f1bd *vignettes/datafile.png
 f4fa64747e23916aa671eb4bdd32a592 *vignettes/example.csv
 1b0beb1689397d31e315ac23eaaea199 *vignettes/msap.Rnw
+d41d8cd98f00b204e9800998ecf8427e *vignettes/msap.bbl
+da0b4b5756fcc0bccdf24433ac9c033b *vignettes/msap.dvi
