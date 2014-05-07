@@ -1,13 +1,12 @@
 # msap - Statistical analysis for Methilation-Sensitive Amplification Polimorphism data
-# version: 1.1.4
 # Author: Andrés Pérez-Figueroa (anpefi@uvigo.es)
 
 
 
 
-msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.redundant=TRUE, rm.monomorphic=TRUE, do.pcoa=TRUE, do.shannon=TRUE, do.amova=TRUE, do.pairwisePhiST=TRUE, do.cluster=TRUE, use.groups=NULL, do.mantel=FALSE, np.mantel=1000, loci.per.primer=NULL, error.rate.primer=NULL, uninformative=TRUE){
-	
-	cat("\nmsap 1.1.4 - Statistical analysis for Methylation-Sensitive Amplification Polimorphism data\n")
+msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.redundant=TRUE, rm.monomorphic=TRUE, do.pcoa=TRUE, do.shannon=TRUE, do.amova=TRUE, do.pairwisePhiST=FALSE, do.cluster=TRUE, use.groups=NULL, do.mantel=FALSE, np.mantel=1000, loci.per.primer=NULL, error.rate.primer=NULL, uninformative=TRUE){
+	msapVer <- as.character(packageVersion("msap"))
+	cat(paste("\nmsap ", msapVer, " - Statistical analysis for Methylation-Sensitive Amplification Polimorphism data\n"),sep="")
 	 
 	 ########## CHECKING PARAMETERS ############
 	
@@ -67,13 +66,14 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 	cat("\nReading ", datafile,".....")
 	data <- read.csv(datafile, header=TRUE)
 	
-	#Check enzymes
-	temp <- factor(data[,3])
+	if(meth){
+    #Check enzymes
+	  temp <- factor(data[,3])
 	
-	if(!is.element("HPA",levels(temp))) stop("HPA missing. The third column should include both HPA and MSP (capital letters)")
-	if(!is.element("MSP",levels(temp))) stop("MSP missing. The third column should include both HPA and MSP (capital letters)")
-	if(!table(temp)["MSP"]==table(temp)["HPA"]) stop("There are not equal number of rows for HPA and MSP, please check ", datafile)
-	
+	  if(!is.element("HPA",levels(temp))) stop("HPA missing. The third column should include both HPA and MSP (capital letters)")
+	  if(!is.element("MSP",levels(temp))) stop("MSP missing. The third column should include both HPA and MSP (capital letters)")
+	  if(!table(temp)["MSP"]==table(temp)["HPA"]) stop("There are not equal number of rows for HPA and MSP, please check ", datafile)
+	}
 	#Check other values than 0/1
 	vals<-levels(factor(as.matrix(data[,4:length(data[1,])])))
 	if(!(length(vals)==2 && is.element("0", vals) && is.element("1",vals))) stop("There is one (or more) unusual values in the data matrix. Remember only 0 and 1 are allowed. Please, check ",datafile)
@@ -189,11 +189,11 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 			cat("- Saving transformed matrix for NML in file: ",paste(name,"-NML-transformed.csv",sep=""),"\n")
 			write.csv(data.frame(groups,inds,matN), file=paste(name,"-NML-transformed.csv",sep=""), row.names=FALSE)
 		}
-		if(MSL.nloci>0) MSL.I <- apply(matM, 2, shannon)
-		if(NML.nloci>0) NML.I <- apply(matN, 2, shannon)
-		if(MSL.nloci>0)cat("\nShannon's Diversity Index \n")
-		if(MSL.nloci>0) cat("MSL: I = ", mean(MSL.I, na.rm=T),"  (SD: ", sd(MSL.I, na.rm=T),")\n")
-		if(NML.nloci>0){
+		if(MSL.nloci>1) MSL.I <- apply(matM, 2, shannon)
+		if(NML.nloci>1) NML.I <- apply(matN, 2, shannon)
+		if(MSL.nloci>1)cat("\nShannon's Diversity Index \n")
+		if(MSL.nloci>1) cat("MSL: I = ", mean(MSL.I, na.rm=T),"  (SD: ", sd(MSL.I, na.rm=T),")\n")
+		if(NML.nloci>1){
 		cat("NML: I = ", mean(NML.I, na.rm=T),"  (SD: ", sd(NML.I, na.rm=T),")\n")
 		wt<-wilcox.test(MSL.I,NML.I)
 		pval<-ifelse(wt$p.value<0.0001, "P < 0.0001", paste("P = ",wt$p.value))
@@ -204,27 +204,26 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 		}
 	
 		### MSL 
-		if(MSL.nloci>0){
+		if(MSL.nloci>1){
 		
 			cat("\n\n*****************************\nAnalysis of MSL\n")
 			meth.rep <- repMet(dataMIX[,MSL], groups, nDec)
 		  cat("\n\n")
-	
-			DM<-lingoes(as.dist(smc(matM, dist=TRUE))) #Simple Matching Coefficient, from scrime
-		
+
+
+		  DM<- dist(matM, method="euclidean", upper=T, diag=T)
 			if(do.cluster){
 				# cluster
 				DM_copy <- DM
 				attr(DM_copy, "Labels") <- inds
 				np <- table(groups)[]
 				MSL.cluster <-nj(DM_copy) 
-				darksch <- c("#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#A6761D","#666666","#E64AB02")
-				tipCol<-rep(darksch[1:length(np)],np)
+				tipCol<-rep(rainbow(length(np)+1)[-2], np)
 				ecol<-unlist(lapply(MSL.cluster$edge[,2], edgeCol, length(MSL.cluster$tip.label), tipCol))
 				cat("- Saving clustering tree figure for MSL in file: ", paste(name,"MSL-NJ.png", sep='-'),".....")
 				png(filename=paste(name,"MSL-NJ.png", sep='-'))
-				plot.phylo(MSL.cluster, tip.color=rep(darksch[1:length(np)],np), use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="MSL")
-				legend("bottomright", as.character(levels(groups)), col=darksch, lwd=3)
+				plot.phylo(MSL.cluster, tip.color=tipCol, use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="MSL")
+				legend("bottomright", as.character(levels(groups)), col=rainbow(length(np)+1)[-2], lwd=3)
 				dev.off()
         cat("Ok!\n")
 			}
@@ -260,21 +259,20 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 		cat("Number of polymorphic AFLP: ",NML.ploci," (",format(NML.ploci/NML.nloci*100,digits=1),"% of total)\n\n")
 		NML.nloci <- NML.ploci
 		
-		DM<-lingoes(as.dist(smc(matN, dist=TRUE))) #smc(scrime), lingoes(ade4)
 		
+		DM<- dist(matN, method="euclidean", upper=T, diag=T)
 		if(do.cluster){
 			# cluster
 			DM_copy <- DM
 			attr(DM_copy, "Labels") <- inds
 			np <- table(groups)[]
 			MSL.cluster <-nj(DM_copy) 
-			darksch <- c("#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#A6761D","#666666","#E64AB02")
-			tipCol<-rep(darksch[1:length(np)],np)
+			tipCol<-rep(rainbow(length(np)+1)[-2], np)
 			ecol<-unlist(lapply(MSL.cluster$edge[,2], edgeCol, length(MSL.cluster$tip.label), tipCol))
 			cat("- Saving clustering tree figure for AFLP in file: ", paste(name,"AFLP-NJ.png", sep='-'),".....")
 			png(filename=paste(name,"AFLP-NJ.png", sep='-'))
-			plot.phylo(MSL.cluster, tip.color=rep(darksch[1:length(np)],np), use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="AFLP")
-			legend("bottomright", as.character(levels(groups)), col=darksch, lwd=3)
+			plot.phylo(MSL.cluster, tip.color=tipCol, use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="AFLP")
+			legend("bottomright", as.character(levels(groups)), col=rainbow(length(np)+1)[-2], lwd=3)
 			dev.off()
       cat("Ok!\n")
 			
@@ -293,23 +291,23 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 		NML.nloci <- 0  #Added to skip NML analysis
 	}
 	#### NML
-	if(NML.nloci>0){	
+	if(NML.nloci>1){	
 		if(meth) cat("\n\n*****************************\nAnalysis of NML\n\n")
-		DM<-lingoes(as.dist(smc(matN, dist=TRUE))) #smc(scrime), lingoes(ade4)
+		DM<- dist(matN, method="euclidean", upper=T, diag=T)
 		if(do.cluster){
 			# cluster
 			DM_copy <- DM
 			attr(DM_copy, "Labels") <- inds
 			np <- table(groups)[]
 			MSL.cluster <-nj(DM_copy) 
-			darksch <- c("#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#A6761D","#666666","#E64AB02")
-			tipCol<-rep(darksch[1:length(np)],np)
+      tipCol<-rep(rainbow(length(np)+1)[-2], np)
 			ecol<-unlist(lapply(MSL.cluster$edge[,2], edgeCol, length(MSL.cluster$tip.label), tipCol))
 			cat("- Saving clustering tree figure for NML in file: ", paste(name,"NML-NJ.png", sep='-'),".....")
 			png(filename=paste(name,"NML-NJ.png", sep='-'))
-			plot.phylo(MSL.cluster, tip.color=rep(darksch[1:length(np)],np), use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="NML")
-			legend("bottomright", as.character(levels(groups)), col=darksch, lwd=3)
+			plot.phylo(MSL.cluster, tip.color=tipCol, use.edge.length=T, edge.color=ecol, edge.width=3, show.tip.label=T, main="NML")
+			legend("bottomright", as.character(levels(groups)), col=rainbow(length(np)+1)[-2], lwd=3)
 			dev.off()
+      
       DM.NML <- DM
       cat("Ok!\n")
 			
@@ -330,15 +328,15 @@ msap <- function(datafile, name=datafile, no.bands="u", nDec=4, meth=TRUE, rm.re
 		}
 	}
 	else{
-		cat("There are not polymorphic NML. Diversity Analysis skipped.\n")
+		if(meth) cat("There are not polymorphic NML. Diversity Analysis skipped.\n")
 	}
 	
   #Storing some interesting item in a list to be returned (as suggested by C. Herrera)
 	res <- list(
     groups = if(exists("groups")) {groups} else {NULL},
-    patterns = if(exists("meth.rep")) {meth.rep} else {NULL},
-    transformed.MSL = if(MSL.nloci>0) {data.frame(groups,inds,matM)} else {NULL},
-    transformed.NML = if(NML.nloci>0) {data.frame(groups,inds,matN)} else {NULL},
+    patterns = if(meth && exists("meth.rep")) {meth.rep} else {NULL},
+    transformed.MSL = if(meth && MSL.nloci>0) {data.frame(groups,inds,matM)} else {NULL},
+    transformed.NML =  if(meth && NML.nloci>0) {data.frame(groups,inds,matN)} else {NULL},
     DM.MSL = if(exists("DM.MSL")) {DM.MSL} else {NULL},
     DM.NML = if(exists("DM.NML")) {DM.NML} else {NULL},
     DM.AFLP = if(exists("DM.AFLP")) {DM.AFLP} else {NULL}
